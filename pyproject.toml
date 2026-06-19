@@ -1,9 +1,9 @@
 [project]
 name = "ambient-expense-agent"
 version = "0.1.0"
-description = ""
+description = "Based on the 5 days intensive Google Agents course (days 1-5)"
 authors = [
-    {name = "Your Name", email = "your@email.com"},
+    {name = "Ismael Marin", email = "[EMAIL_ADDRESS]"},
 ]
 
 

@@ -5,7 +5,7 @@ Agent generated with `agents-cli` version `0.5.0`
 
 ## Project Structure
 
-```
+```text
 ambient-expense-agent/
 ├── app/         # Core agent code
 │   ├── agent.py               # Main agent logic
@@ -21,10 +21,10 @@ ambient-expense-agent/
 ## Requirements
 
 Before you begin, ensure you have:
+
 - **uv**: Python package manager (used for all dependency management in this project) - [Install](https://docs.astral.sh/uv/getting-started/installation/) ([add packages](https://docs.astral.sh/uv/concepts/dependencies/) with `uv add <package>`)
 - **agents-cli**: Agents CLI - Install with `uv tool install google-agents-cli`
 - **Google Cloud SDK**: For GCP services - [Install](https://cloud.google.com/sdk/docs/install)
-
 
 ## Quick Start
 
