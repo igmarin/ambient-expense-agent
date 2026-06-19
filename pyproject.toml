@@ -3,10 +3,8 @@ name = "ambient-expense-agent"
 version = "0.1.0"
 description = "Based on the 5 days intensive Google Agents course (days 1-5)"
 authors = [
-    {name = "Ismael Marin", email = "[EMAIL_ADDRESS]"},
+    {name = "Ismael Marin", email = "ismael.marin@gmail.com"},
 ]
-
-
 
 dependencies = [
     "google-adk[gcp]>=2.0.0,<3.0.0",
@@ -16,7 +14,7 @@ dependencies = [
     "google-cloud-aiplatform[evaluation,agent-engines]>=1.156.0",
     "protobuf>=6.31.1,<7.0.0",
 ]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.14"
 
 
 [dependency-groups]
@@ -24,6 +22,10 @@ dev = [
     "pytest>=9.0.2,<10.0.0",
     "pytest-asyncio>=1.0.0,<2.0.0",
     "nest-asyncio>=1.6.0,<2.0.0",
+    "ruff>=0.4.6,<1.0.0",
+    "pylint>=3.0.0,<4.0.0",
+    "ty>=0.0.1a0",
+    "codespell>=2.2.0,<3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -33,13 +35,14 @@ eval = [
 ]
 lint = [
     "ruff>=0.4.6,<1.0.0",
+    "pylint>=3.0.0,<4.0.0",
     "ty>=0.0.1a0",
     "codespell>=2.2.0,<3.0.0",
 ]
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [
@@ -55,14 +58,14 @@ select = [
 ignore = ["E501", "C901", "B006"] # ignore line too long, too complex
 
 [tool.ruff.lint.isort]
-known-first-party = ["app", "frontend"]
+known-first-party = ["expense_agent"]
 
 [tool.ty]
 # ty is Astral's Rust-based type checker (same team as ruff/uv)
 # See: https://docs.astral.sh/ty/
 
 [tool.ty.environment]
-python-version = "3.10"
+python-version = "3.12"
 
 [tool.ty.src]
 exclude = [".venv/**"]
@@ -82,9 +85,6 @@ deprecated = "ignore"
 ignore-words-list = "rouge"
 skip = "./locust_env/*,uv.lock,.venv,./frontend,**/package-lock.json"
 
-
-
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -95,6 +95,42 @@ pythonpath = "."
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app","frontend"]
+packages = ["expense_agent"]
 
 
+# ---------------------------------------------------------------------------
+# Pylint
+# ---------------------------------------------------------------------------
+[tool.pylint.main]
+# Run across our source + tests; skip generated / virtual env files.
+py-version = "3.12"
+recursive = true
+ignore-paths = ["\\.venv", "deployment", "__pycache__"]
+jobs = 0  # auto-detect CPU count for parallel linting
+
+[tool.pylint.messages_control]
+# Keep signal-to-noise high. Disable stylistic checks already covered
+# by ruff (line length, naming conventions handled per-project below).
+disable = [
+    "C0114",  # missing-module-docstring  (ruff handles this if needed)
+    "C0115",  # missing-class-docstring
+    "C0116",  # missing-function-docstring
+    "R0903",  # too-few-public-methods   (common with Pydantic models)
+    "W0511",  # fixme / todo             (noise in development)
+]
+
+[tool.pylint.format]
+max-line-length = 88  # match ruff / black
+
+[tool.pylint.design]
+max-args = 8          # generous limit for node functions that take ctx + inputs
+max-locals = 20
+
+[tool.pylint.typecheck]
+# ADK decorators wrap functions in a way pylint cannot always introspect.
+ignored-modules = ["google.adk", "google.genai"]
+ignored-classes = ["google.adk.workflow.Workflow", "google.adk.agents.LlmAgent"]
+
+[tool.pylint."tests.*"]
+# pytest injects fixtures as function arguments — not a real name clash.
+disable = ["redefined-outer-name"]
