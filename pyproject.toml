@@ -133,4 +133,6 @@ ignored-classes = ["google.adk.workflow.Workflow", "google.adk.agents.LlmAgent"]
 
 [tool.pylint."tests.*"]
 # pytest injects fixtures as function arguments — not a real name clash.
-disable = ["redefined-outer-name"]
+# protected-access: unit tests intentionally call node._func (the underlying
+#   callable of ADK's @node-wrapped FunctionNode objects) to test business logic.
+disable = ["redefined-outer-name", "protected-access"]

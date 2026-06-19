@@ -97,24 +97,24 @@ make test
 Equivalent command:
 
 ```bash
-uv run pytest tests/unit tests/integration
+uv run python -m pytest tests/unit tests/integration
 ```
 
 ### Run a single test file
 
 ```bash
-uv run pytest tests/integration/test_agent.py
+uv run python -m pytest tests/integration/test_agent.py
 ```
 
 ### Run one specific test
 
 ```bash
-uv run pytest tests/integration/test_agent.py::test_auto_approve_low_amount
+uv run python -m pytest tests/integration/test_agent.py::test_auto_approve_low_amount
 ```
 
 ### What to expect
 
-- **4 tests** should pass (1 unit + 3 integration).
+- **32 tests** should pass (29 unit + 3 integration).
 - A few deprecation warnings from Google ADK libraries are normal and can be ignored for now.
 
 ---
@@ -138,7 +138,7 @@ Equivalent commands:
 
 ```bash
 uv run ruff check expense_agent tests
-uv run pylint expense_agent tests
+uv run python -m pylint expense_agent tests
 ```
 
 ### Auto-fix (ruff only)

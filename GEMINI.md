@@ -15,7 +15,22 @@ uv tool install google-agents-cli
 Before writing any code, understand the project's requirements, constraints, and success criteria.
 
 ### Phase 2: Build and Implement
-Implement agent logic in `app/`. Use `agents-cli playground` for interactive testing. Iterate based on user feedback.
+Implement agent logic in `expense_agent/`. Use `agents-cli playground` for interactive testing. Iterate based on user feedback.
+
+#### Workflow architecture
+The agent is an ADK 2.0 `Workflow` with these nodes:
+
+`parse_event` → `route_expense` → (`auto_approver` | `security_checkpoint`) → (`llm_reviewer` | `human_approval`)
+
+- `route_expense`: amount < `THRESHOLD_USD` (100.0) → `auto_approve`; else → `security_check`.
+- `security_checkpoint`: scrubs PII (SSN → `[REDACTED_SSN]`, CC → `[REDACTED_CC]`), then checks for prompt-injection keywords → `security_event` (HIGH risk) or `clean`.
+- `llm_reviewer`: `LlmAgent` (`REVIEW_MODEL`) producing a `RiskAssessment`.
+- `human_approval`: pauses for human sign-off on flagged expenses.
+
+#### Security invariants
+- **Never log or emit raw PII.** SSNs and credit-card numbers must be redacted by `security_checkpoint` before reaching any downstream node.
+- **Prompt-injection phrases** route directly to `human_approval` as a security event — they must never reach `llm_reviewer`.
+- Node functions are wrapped by `@node` into `FunctionNode` objects (not directly callable). Access the underlying callable via `node._func` in unit tests.
 
 ### Phase 3: The Evaluation Loop (Main Iteration Phase)
 Start with 1-2 eval cases, run `agents-cli eval generate`, then `agents-cli eval grade`, iterate by making changes and rerunning both commands until satisfied. Expect 5-10+ iterations. Once you have a baseline, reach for `agents-cli eval compare` (regression diffs), `agents-cli eval analyze` (cluster failure modes), and `agents-cli eval optimize` (auto-tune prompts). See the **Evaluation Guide** for metrics, dataset schema, LLM-as-judge config, and common gotchas.

@@ -8,11 +8,11 @@ install-hooks:
 	git config core.hooksPath .githooks
 
 test:
-	uv run pytest tests/unit tests/integration
+	uv run python -m pytest tests/unit tests/integration
 
 lint:
 	uv run ruff check expense_agent tests
-	uv run pylint expense_agent tests
+	uv run python -m pylint expense_agent tests
 
 lint-fix:
 	uv run ruff check --fix expense_agent tests
