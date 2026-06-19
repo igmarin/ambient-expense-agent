@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Run lint and test checks before every commit.
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if ! command -v uv >/dev/null 2>&1; then
+    echo "pre-commit: uv not found in PATH."
+    echo "Install uv: https://docs.astral.sh/uv/getting-started/installation/"
+    exit 1
+fi
+
+if [ ! -d ".venv" ]; then
+    echo "pre-commit: virtual environment missing. Run: make install"
+    exit 1
+fi
+
+echo "pre-commit: running linters..."
+make lint
+
+echo "pre-commit: running tests..."
+make test
+
+echo "pre-commit: all checks passed."
