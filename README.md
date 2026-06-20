@@ -114,7 +114,7 @@ uv run python -m pytest tests/integration/test_agent.py::test_auto_approve_low_a
 
 ### What to expect
 
-- **32 tests** should pass (29 unit + 3 integration).
+- **49 tests** should pass (35 unit + 14 integration).
 - A few deprecation warnings from Google ADK libraries are normal and can be ignored for now.
 
 ---
