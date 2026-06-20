@@ -203,3 +203,6 @@ my_env.tfvars
 # A2A Inspector
 tools/a2a-inspector/
 .qodo/
+
+# Eval build artifacts (generated traces + grade results)
+artifacts/

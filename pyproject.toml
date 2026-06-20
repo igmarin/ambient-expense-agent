@@ -13,6 +13,8 @@ dependencies = [
     "google-cloud-logging>=3.12.0,<4.0.0",
     "google-cloud-aiplatform[evaluation,agent-engines]>=1.156.0",
     "protobuf>=6.31.1,<7.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
 ]
 requires-python = ">=3.12,<3.14"
 
@@ -93,6 +95,17 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 pythonpath = "."
 asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "llm: tests that require live LLM API credentials (GEMINI_API_KEY or GOOGLE_CLOUD_PROJECT)",
+]
+filterwarnings = [
+    # ADK 2.0: BaseAgentConfig is deprecated internally — not actionable on our side.
+    "ignore:BaseAgentConfig is deprecated:DeprecationWarning",
+    # Starlette: TestClient with httpx is deprecated; pending httpx2 migration upstream.
+    "ignore:Using `httpx` with `starlette.testclient`:starlette.exceptions.StarletteDeprecationWarning",
+    # google-genai: AiohttpClientSession inheriting from ClientSession is discouraged.
+    "ignore:Inheritance class AiohttpClientSession from ClientSession:DeprecationWarning",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["expense_agent"]
@@ -135,4 +148,8 @@ ignored-classes = ["google.adk.workflow.Workflow", "google.adk.agents.LlmAgent"]
 # pytest injects fixtures as function arguments — not a real name clash.
 # protected-access: unit tests intentionally call node._func (the underlying
 #   callable of ADK's @node-wrapped FunctionNode objects) to test business logic.
-disable = ["redefined-outer-name", "protected-access"]
+# duplicate-code: test files naturally share fixture-like data (expense dicts,
+#   Pub/Sub envelopes) across unit and integration suites.
+# wrong-import-position: eval scripts manipulate sys.path before importing
+#   the project package, which requires imports after the path setup.
+disable = ["redefined-outer-name", "protected-access", "duplicate-code", "wrong-import-position"]

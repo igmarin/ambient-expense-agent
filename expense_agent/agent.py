@@ -121,8 +121,15 @@ def human_approval(ctx: Context, node_input: RiskAssessment):
         )
         return
 
-    # Once human provides input, record and emit final decision
-    decision = ctx.resume_inputs[interrupt_id]
+    # Once human provides input, validate and emit final decision.
+    # Only "Approved" or "Rejected" are accepted — arbitrary strings are
+    # treated as "Rejected" to prevent an attacker from injecting a custom
+    # status value through the resume path.
+    raw_decision = ctx.resume_inputs[interrupt_id]
+    if isinstance(raw_decision, str) and raw_decision.strip() == "Approved":
+        decision = "Approved"
+    else:
+        decision = "Rejected"
     yield Event(output={"status": decision, "reasoning": node_input.reasoning})
 
 
