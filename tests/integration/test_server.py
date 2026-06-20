@@ -327,3 +327,131 @@ def test_push_high_amount_triggers_llm_review(client):
     # human_approval must have fired (pausing for human input).
     human_events = [e for e in events if "human_approval" in e.get("node", "")]
     assert human_events, "Expected human_approval to fire after LLM review"
+
+
+# ---------------------------------------------------------------------------
+# /sessions — session inspection endpoints (dev-only, no auth)
+#
+# The _session_service is a module-level singleton shared across all tests.
+# To avoid cross-test contamination, these tests use a unique subscription
+# name per test so sessions don't collide with those from other tests.
+# ---------------------------------------------------------------------------
+
+_SESSION_TEST_SUB = "test-sessions-endpoint"
+
+
+def _pubsub_envelope_unique(expense: dict) -> dict:
+    """Build a Pub/Sub envelope with a unique subscription for session tests."""
+    return _pubsub_envelope(expense, subscription=_SESSION_TEST_SUB)
+
+
+def test_list_sessions_returns_200(client):
+    """GET /sessions returns 200 with the expected response structure."""
+    response = client.get("/sessions")
+    assert response.status_code == 200
+    body = response.json()
+    assert "users" in body
+    assert "sessions_by_user" in body
+    assert isinstance(body["users"], list)
+    assert isinstance(body["sessions_by_user"], dict)
+
+
+def test_list_sessions_shows_new_session(client):
+    """GET /sessions shows a session after a /push creates one."""
+    expense = {
+        "amount": 25.00,
+        "submitter": "alice",
+        "category": "supplies",
+        "description": "pens",
+        "date": "2026-06-19",
+    }
+    client.post("/push", json=_pubsub_envelope_unique(expense))
+
+    response = client.get("/sessions")
+    assert response.status_code == 200
+    body = response.json()
+    # The unique subscription must appear in the users list.
+    user_ids = [u["user_id"] for u in body["users"]]
+    assert _SESSION_TEST_SUB in user_ids
+    sessions = body["sessions_by_user"][_SESSION_TEST_SUB]
+    assert len(sessions) >= 1
+    assert sessions[0]["user_id"] == _SESSION_TEST_SUB
+
+
+def test_list_sessions_filtered_by_user_id(client):
+    """GET /sessions?user_id=X returns only sessions for that user."""
+    expense = {
+        "amount": 25.00,
+        "submitter": "alice",
+        "category": "supplies",
+        "description": "pens",
+        "date": "2026-06-19",
+    }
+    client.post("/push", json=_pubsub_envelope_unique(expense))
+
+    response = client.get(f"/sessions?user_id={_SESSION_TEST_SUB}")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user_id"] == _SESSION_TEST_SUB
+    assert len(body["sessions"]) >= 1
+    assert all(s["user_id"] == _SESSION_TEST_SUB for s in body["sessions"])
+    # list_sessions returns lightweight sessions (event_count may be 0);
+    # verify the session exists — the full event list is tested via
+    # GET /sessions/{id} in test_get_session_detail below.
+
+
+def test_list_sessions_filtered_nonexistent_user(client):
+    """GET /sessions?user_id=nonexistent returns an empty session list."""
+    response = client.get("/sessions?user_id=definitely-no-such-user-xyz")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user_id"] == "definitely-no-such-user-xyz"
+    assert body["sessions"] == []
+
+
+def test_get_session_detail(client):
+    """GET /sessions/{id}?user_id=X returns full session with events."""
+    expense = {
+        "amount": 25.00,
+        "submitter": "alice",
+        "category": "supplies",
+        "description": "pens",
+        "date": "2026-06-19",
+    }
+    push_response = client.post("/push", json=_pubsub_envelope_unique(expense))
+    assert push_response.status_code == 200
+
+    # Discover the session ID via the list endpoint. list_sessions returns
+    # sessions sorted by creation order; pick the most recent one (last in
+    # the list has the highest last_update_time).
+    list_response = client.get(f"/sessions?user_id={_SESSION_TEST_SUB}")
+    sessions = list_response.json()["sessions"]
+    assert len(sessions) >= 1
+    # Try each session until we find one with events (list_sessions may
+    # return stale sessions from other tests; the one we just created
+    # will have events when fetched via get_session).
+    session_id = sessions[-1]["id"]
+
+    # Fetch full session detail.
+    detail_response = client.get(
+        f"/sessions/{session_id}?user_id={_SESSION_TEST_SUB}"
+    )
+    assert detail_response.status_code == 200
+    detail = detail_response.json()
+    assert detail["id"] == session_id
+    assert detail["user_id"] == _SESSION_TEST_SUB
+    assert len(detail["events"]) > 0
+    # The auto_approver node should appear in the event list.
+    nodes = [e.get("node", "") for e in detail["events"]]
+    assert any("auto_approver" in n for n in nodes), (
+        f"Expected auto_approver in session events; nodes: {nodes}"
+    )
+
+
+def test_get_session_not_found(client):
+    """GET /sessions/nonexistent returns 404."""
+    response = client.get(
+        "/sessions/nonexistent-id?user_id=definitely-no-such-user-xyz"
+    )
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()

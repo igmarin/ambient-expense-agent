@@ -27,6 +27,7 @@ serve:
 generate-traces:
 	uv run python tests/eval/generate_traces.py
 
+# Grade existing traces without regenerating. Use `make eval` to do both.
 grade:
 	uv run agents-cli eval grade \
 		--traces artifacts/traces/generated_traces.json \

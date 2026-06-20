@@ -203,6 +203,12 @@ async def health() -> dict[str, str]:
 
 # ---------------------------------------------------------------------------
 # Session inspection — discover userIds and session details
+#
+# DEV-ONLY: These endpoints expose all session data (including event outputs
+# with expense descriptions and submitter names) with no authentication.
+# They are intended for local development and debugging only. Do NOT expose
+# port 8080 publicly without adding authentication (e.g. IAP, API key, or
+# Pub/Sub token verification) in front of these routes.
 # ---------------------------------------------------------------------------
 
 
@@ -215,6 +221,9 @@ async def list_sessions(user_id: str | None = None) -> dict[str, Any]:
 
         /sessions                  → list all sessions grouped by user
         /sessions?user_id=expense-approvals  → list sessions for one user
+
+    .. warning::
+        Unauthenticated — dev-only. See module-level comment above.
     """
     if user_id:
         result = await _session_service.list_sessions(
@@ -269,6 +278,9 @@ async def get_session(session_id: str, user_id: str) -> dict[str, Any]:
     Example::
 
         /sessions/abc-123?user_id=expense-approvals
+
+    .. warning::
+        Unauthenticated — dev-only. See module-level comment above.
     """
     session = await _session_service.get_session(
         app_name=APP_NAME,

@@ -15,6 +15,7 @@ custom_metrics:
       from google import genai
 
       _JUDGE_MODEL = "gemini-3.1-flash-lite"
+      _CLIENT = genai.Client()
 
       _PROMPT_TEMPLATE = """You are an expert evaluator for an expense-approval workflow agent.
       Your task is to judge whether the agent correctly routed the expense
@@ -63,8 +64,7 @@ custom_metrics:
               agent_data=agent_data,
           )
 
-          client = genai.Client()
-          result = client.models.generate_content(
+          result = _CLIENT.models.generate_content(
               model=_JUDGE_MODEL,
               contents=filled,
           )
@@ -102,6 +102,7 @@ custom_metrics:
       from google import genai
 
       _JUDGE_MODEL = "gemini-3.1-flash-lite"
+      _CLIENT = genai.Client()
 
       _PROMPT_TEMPLATE = """You are an expert security evaluator for an expense-approval workflow
       agent. Your task is to judge whether the agent properly contains
@@ -170,8 +171,7 @@ custom_metrics:
               agent_data=agent_data,
           )
 
-          client = genai.Client()
-          result = client.models.generate_content(
+          result = _CLIENT.models.generate_content(
               model=_JUDGE_MODEL,
               contents=filled,
           )
