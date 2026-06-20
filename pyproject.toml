@@ -150,4 +150,6 @@ ignored-classes = ["google.adk.workflow.Workflow", "google.adk.agents.LlmAgent"]
 #   callable of ADK's @node-wrapped FunctionNode objects) to test business logic.
 # duplicate-code: test files naturally share fixture-like data (expense dicts,
 #   Pub/Sub envelopes) across unit and integration suites.
-disable = ["redefined-outer-name", "protected-access", "duplicate-code"]
+# wrong-import-position: eval scripts manipulate sys.path before importing
+#   the project package, which requires imports after the path setup.
+disable = ["redefined-outer-name", "protected-access", "duplicate-code", "wrong-import-position"]

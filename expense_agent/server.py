@@ -201,6 +201,106 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+# ---------------------------------------------------------------------------
+# Session inspection — discover userIds and session details
+# ---------------------------------------------------------------------------
+
+
+@app.get("/sessions")
+async def list_sessions(user_id: str | None = None) -> dict[str, Any]:
+    """List sessions, optionally filtered by user_id.
+
+    Without a ``user_id`` query parameter, returns all sessions grouped by
+    user.  This is how you discover the ``userId`` to use in the dev-ui URL::
+
+        /sessions                  → list all sessions grouped by user
+        /sessions?user_id=expense-approvals  → list sessions for one user
+    """
+    if user_id:
+        result = await _session_service.list_sessions(
+            app_name=APP_NAME, user_id=user_id
+        )
+        return {
+            "user_id": user_id,
+            "sessions": [
+                {
+                    "id": s.id,
+                    "user_id": s.user_id,
+                    "app_name": s.app_name,
+                    "last_update_time": s.last_update_time,
+                    "event_count": len(s.events),
+                }
+                for s in result.sessions
+            ],
+        }
+
+    # No user_id filter — list all sessions across all users.
+    # list_sessions without user_id returns every session for the app.
+    result = await _session_service.list_sessions(app_name=APP_NAME)
+
+    sessions_by_user: dict[str, list[dict[str, Any]]] = {}
+    for s in result.sessions:
+        sessions_by_user.setdefault(s.user_id, []).append(
+            {
+                "id": s.id,
+                "user_id": s.user_id,
+                "app_name": s.app_name,
+                "last_update_time": s.last_update_time,
+                "event_count": len(s.events),
+            }
+        )
+
+    return {
+        "users": [
+            {"user_id": uid, "session_count": len(sessions)}
+            for uid, sessions in sorted(sessions_by_user.items())
+        ],
+        "sessions_by_user": sessions_by_user,
+    }
+
+
+@app.get("/sessions/{session_id}")
+async def get_session(session_id: str, user_id: str) -> dict[str, Any]:
+    """Get full session details including all events.
+
+    Query parameters:
+        user_id: The user_id (normalized subscription name) that owns the session.
+
+    Example::
+
+        /sessions/abc-123?user_id=expense-approvals
+    """
+    session = await _session_service.get_session(
+        app_name=APP_NAME,
+        user_id=user_id,
+        session_id=session_id,
+    )
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Session {session_id} not found for user '{user_id}'",
+        )
+
+    return {
+        "id": session.id,
+        "user_id": session.user_id,
+        "app_name": session.app_name,
+        "state": session.state,
+        "last_update_time": session.last_update_time,
+        "events": [
+            {
+                "id": e.id,
+                "author": e.author,
+                "node": e.node_info.path if e.node_info else "",
+                "route": e.actions.route if e.actions else "",
+                "output": e.output,
+                "timestamp": e.timestamp,
+            }
+            for e in session.events
+        ],
+    }
+
+
 def main() -> None:
     """Entry point for ``make serve``."""
     uvicorn.run(
